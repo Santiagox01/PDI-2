@@ -1,0 +1,223 @@
+\documentclass[journal,compsoc,twoside]{IEEEtran}
+
+\usepackage[utf8]{inputenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{cite}
+\usepackage{url}
+\usepackage{microtype}
+
+\graphicspath{{figures/}}
+
+\begin{document}
+
+\title{Clasificación y Detección de Monedas de Euro mediante Descriptores Clásicos de Visión por Computadora y Aprendizaje Automático}
+
+\author{
+    \IEEEauthorblockN{Primer Integrante\IEEEauthorrefmark{1}, Segundo Integrante\IEEEauthorrefmark{1}, Tercer Integrante\IEEEauthorrefmark{1}}\\
+    \IEEEauthorblockA{\IEEEauthorrefmark{1}Facultad de Ingeniería, Departamento de Ingeniería Electrónica y de Telecomunicaciones\\
+    Universidad de Antioquia UdeA, Medellín, Colombia\\
+    Procesamiento Digital de Imágenes\\
+    Correo electrónico: \{integrante1, integrante2, integrante3\}@udea.edu.co}
+}
+
+\markboth{Universidad de Antioquia -- Procesamiento Digital de Imágenes, 2026}{EuroCoinClassifier: Clasificación de Monedas de Euro}
+
+\maketitle
+
+\begin{abstract}
+En este trabajo se presenta el diseño, implementación y evaluación experimental de un sistema autónomo para la detección, segmentación y clasificación de monedas de euro en imágenes digitales utilizando descriptores clásicos de visión artificial. A partir del dataset público \textit{janstaffa/euro-coins-dataset}, conformado por 150 fotografías de escenas reales de alta resolución ($960 \times 720$ píxeles) y 336 instancias anotadas de las 8 denominaciones oficiales, se desarrolló un pipeline compuesto por corrección de iluminación mediante CLAHE en el espacio CIELAB, umbralización bimodal de Otsu, morfología matemática y transformada de distancia acoplada con Watershed para el desprendimiento de monedas en contacto. Se extrajeron y compararon cuatro familias de características: Histogramas de Gradientes Orientados (HOG, 8100 dimensiones), descriptores geométricos y momentos invariantes de Hu (17 dimensiones), estadísticos cromáticos multiespaciales (HSV, CIELAB, RGB e histogramas reducidos, 74 dimensiones) y descriptores de microtextura superficial (LBP circular uniforme y matrices GLCM, 46 dimensiones). La partición de datos se ejecutó de forma agrupada por fotografía original para garantizar la estricta ausencia de fuga de información (70\% entrenamiento, 15\% validación y 15\% prueba). Se evaluaron cinco clasificadores (SVM Lineal, SVM RBF, $k$-NN, Random Forest y MLP) a lo largo de cinco experimentos (E1 a E5) y reducción dimensional por PCA. El modelo definitivo seleccionado, SVM con kernel lineal sobre HOG ($C=0.01$), alcanzó una exactitud del 88.68\% y un F1-score macro de 0.8877 en el conjunto de prueba reservado, con una latencia de inferencia de 1.36 ms por moneda. Finalmente, se integró una aplicación gráfica interactiva en Streamlit que soporta clasificación individual y detección en escenas complejas con balanceo contable automático.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Visión por computadora, Monedas de euro, HOG, Momentos de Hu, LBP, GLCM, Watershed, Máquinas de Vectores de Soporte, Prevención de fuga de datos.
+\end{IEEEkeywords}
+
+\section{Introducción}
+\IEEEPARstart{E}{l} reconocimiento automatizado de numerario metálico representa una tarea fundamental en sistemas embebidos de cobro, máquinas de autoservicio y procesamiento contable. A diferencia del papel moneda, las monedas metálicas presentan desafíos severos de reflectancia especular, relieve superficial degradado por abrasión, pátina de oxidación y alta variabilidad de diseño entre países de la Eurozona.
+
+El sistema monetario del euro está constituido por ocho denominaciones oficiales organizadas en tres familias metalúrgicas:
+\begin{enumerate}
+    \item \textbf{Aleación de Cobre}: 1 cent, 2 cents y 5 cents (acero con recubrimiento de cobre).
+    \item \textbf{Oro Nórdico}: 10 cents, 20 cents y 50 cents (aleación CuAl5Zn5Sn1).
+    \item \textbf{Monedas Bimetálicas}: 1 euro (núcleo de cuproníquel-níquel y anillo de latón de níquel) y 2 euros (núcleo de latón de níquel y anillo de cuproníquel).
+\end{enumerate}
+
+El objetivo de este proyecto consiste en diseñar, evaluar e implementar un sistema autónomo, robusto y reproducible para la localización y clasificación de las ocho denominaciones, basándose exclusivamente en técnicas de procesamiento digital de imágenes y algoritmos clásicos de aprendizaje automático supervisado, demostrando rigor científico y prevención estricta de fuga de datos (\textit{data leakage}).
+
+\section{Marco Teórico}
+
+\subsection{Corrección de Iluminación: CLAHE}
+La ecualización adaptativa de histograma con limitación de contraste (CLAHE) opera sobre regiones contextuales discretas de la imagen, recortando el histograma local a un umbral predefinido $\beta$ para evitar la amplificación desmedida del ruido térmico y redistribuyendo la densidad acumulada uniformemente:
+\begin{equation}
+\beta_{clip} = \frac{N_{x} \times N_{y}}{L} \left(1 + \frac{\alpha}{100} (S_{max} - 1)\right)
+\end{equation}
+donde $N_x \times N_y$ denota el tamaño del bloque contextual y $L$ el número de niveles de gris. Al aplicarse sobre el canal de luminancia $L^*$ en CIELAB, se normalizan gradientes de sombra sin distorsionar el balance cromático intrínseco.
+
+\subsection{Segmentación y Separación: Watershed}
+La umbralización global de Otsu maximiza la varianza inter-clase $\sigma_B^2(t) = \omega_0(t)\omega_1(t)[\mu_0(t) - \mu_1(t)]^2$. Sin embargo, cuando las monedas se tocan en escenas reales, la máscara binaria resultante genera componentes conexas fusionadas. Para resolverlo, se calcula la Transformada de Distancia Euclidiana $D(p) = \min_{q \in B} ||p - q||_2$, cuyos máximos locales señalan los centroides indiscutibles de cada moneda. Estos actúan como marcadores en la inundación topográfica de Watershed \cite{vincent1991watersheds}, separando con precisión los bordes de contacto tangenciales.
+
+\subsection{Histogram of Oriented Gradients (HOG)}
+Propuesto por Dalal y Triggs \cite{dalal2005histograms}, HOG captura la estructura de contornos y micro-relieves evaluando los gradientes espaciales locales:
+\begin{equation}
+|\nabla I(x, y)| = \sqrt{I_x^2 + I_y^2}, \quad \theta(x, y) = \arctan\left(\frac{I_y}{I_x}\right)
+\end{equation}
+La acumulación de votos ponderados por magnitud en histogramas de 9 orientaciones por celda de $8 \times 8$ píxeles, normalizados en bloques de $2 \times 2$ mediante la norma L2-Hys, confiere robustez ante cambios locales de iluminación.
+
+\subsection{Descriptores de Forma y Momentos de Hu}
+La compacidad y regularidad circular se caracterizan mediante la circularidad $C = 4\pi A / P^2$ y la solidez $S = A / A_{hull}$. Adicionalmente, se extraen los siete momentos invariantes de Hu \cite{hu1962visual}, calculados a partir de momentos centrales normalizados $\eta_{pq} = \mu_{pq} / \mu_{00}^{(p+q)/2 + 1}$, los cuales garantizan invarianza ante traslación, escalamiento y rotación bidimensional.
+
+\subsection{Descriptores de Color y Textura}
+Los estadísticos de primer y segundo orden (media, desviación estándar, ratios intercanal $R/G$ y $R/B$) en HSV y CIELAB se computan estrictamente sobre los píxeles interiores de la máscara de la moneda. La textura superficial se codifica mediante Local Binary Patterns (LBP) uniformes $LBP_{P, R}^{u2}$ \cite{ojala2002multiresolution} y matrices de co-ocurrencia de niveles de gris (GLCM) de Haralick \cite{haralick1973textural}, extrayendo contraste, disimilitud, homogeneidad, energía, correlación y momento de segundo orden angular.
+
+\section{Metodología y Auditoría del Dataset}
+
+\subsection{Inventario y Caracterización de Datos}
+El conjunto de datos utilizado corresponde a \textit{janstaffa/euro-coins-dataset}. Tras la auditoría realizada mediante `src/data/inspect_dataset.py`, se verificó la existencia de 150 imágenes de formato JPEG con dimensiones homogéneas de $960 \times 720$ píxeles y 336 cajas delimitadoras ground truth en formato YOLO. No se detectaron archivos corruptos ni imágenes duplicadas (hashes MD5 independientes).
+
+La Tabla~\ref{tab:dataset_summary} detalla la distribución empírica de clases y el diámetro aparente medido en píxeles.
+
+\begin{table}[htbp]
+\caption{Distribución y dimensiones geométricas del dataset.}
+\label{tab:dataset_summary}
+\centering
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Denominación} & \textbf{ID} & \textbf{Instancias} & \textbf{Proporción} & \textbf{Ancho Prom. (px)} \\
+\midrule
+1 cent   & 0 & 41 & 12.2\% & $130.0 \pm 10.4$ \\
+2 cents  & 1 & 51 & 15.2\% & $154.1 \pm 11.2$ \\
+5 cents  & 2 & 56 & 16.7\% & $158.8 \pm 12.1$ \\
+10 cents & 3 & 32 & 9.5\%  & $156.5 \pm 11.8$ \\
+20 cents & 4 & 50 & 14.9\% & $166.7 \pm 13.0$ \\
+50 cents & 5 & 27 & 8.0\%  & $173.6 \pm 12.5$ \\
+1 euro   & 6 & 51 & 15.2\% & $176.5 \pm 13.4$ \\
+2 euros  & 7 & 28 & 8.3\%  & $184.8 \pm 14.1$ \\
+\bottomrule
+\textbf{Total} & -- & \textbf{336} & \textbf{100.0\%} & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textit{Observación Crítica sobre Requisitos}: Ninguna clase en su estado crudo alcanza de forma aislada las 60 muestras (el rango varía entre 27 y 56 instancias). Esta limitación física del dataset se documenta explícitamente en el informe para salvaguardar la veracidad científica.
+
+\subsection{Prevención de Fuga de Información (Data Leakage)}
+Dado que varias monedas coexisten en la misma fotografía original bajo idéntica cámara, plano focal e iluminación, una partición aleatoria convencional provocaría una severa sobrestimación del desempeño. Por consiguiente, se diseñó una partición estratificada por grupos mediante optimización combinatoria en `src/data/create_splits.py`, donde el identificador `original_image_id` actuó como grupo atómico disjunto:
+\begin{itemize}
+    \item \textbf{Entrenamiento (70\%)}: 105 fotografías, 235 monedas.
+    \item \textbf{Validación (15\%)}: 23 fotografías, 48 monedas.
+    \item \textbf{Prueba Reservada (15\%)}: 22 fotografías, 53 monedas.
+\end{itemize}
+Se verificó formalmente que $\text{Train} \cap \text{Val} = \emptyset$, $\text{Train} \cap \text{Test} = \emptyset$ y $\text{Val} \cap \text{Test} = \emptyset$.
+
+\section{Diseño Experimental y Comparación de Modelos}
+
+Se estructuraron cinco configuraciones experimentales escalonadas:
+\begin{itemize}
+    \item \textbf{E1}: HOG exclusivo (8100 dimensiones).
+    \item \textbf{E2}: Forma y Momentos de Hu (17 dimensiones).
+    \item \textbf{E3}: Colorimetría enmascarada HSV/CIELAB/RGB (74 dimensiones).
+    \item \textbf{E4}: Textura LBP y GLCM (46 dimensiones).
+    \item \textbf{E5}: Combinación Multimodal completa (8237 dimensiones).
+\end{itemize}
+
+Todos los modelos se optimizaron mediante GridSearchCV con validación cruzada estratificada de 5 particiones estrictamente sobre el conjunto de entrenamiento. En la Tabla~\ref{tab:comparison} se presentan los resultados comparativos obtenidos sobre el conjunto de validación.
+
+\begin{table}[htbp]
+\caption{Comparativa experimental de clasificadores (Conjunto de Validación).}
+\label{tab:comparison}
+\centering
+\begin{tabular}{llcccc}
+\toprule
+\textbf{Exp.} & \textbf{Clasificador} & \textbf{Dim.} & \textbf{CV F1-M} & \textbf{Val Acc.} & \textbf{Val F1-M} \\
+\midrule
+\textbf{E1} & \textbf{SVM Lineal ($C=0.01$)} & \textbf{8100} & \textbf{0.8044} & \textbf{87.50\%} & \textbf{0.8382} \\
+E5 & SVM Lineal ($C=0.01$) & 8237 & 0.8044 & 85.42\% & 0.8190 \\
+E5 & SVM RBF + PCA(95\%) & 8237 & 0.7333 & 79.17\% & 0.7587 \\
+E1 & $k$-NN ($k=3$, Manhattan) & 8100 & 0.6826 & 77.08\% & 0.7517 \\
+E5 & $k$-NN ($k=3$, Manhattan) & 8237 & 0.7095 & 77.08\% & 0.7403 \\
+E1 & MLP (50 neuronas) & 8100 & 0.6798 & 75.00\% & 0.7128 \\
+E5 & Random Forest & 8237 & 0.6785 & 75.00\% & 0.6998 \\
+E1 & SVM RBF ($C=10$) & 8100 & 0.6998 & 79.17\% & 0.6736 \\
+E3 & SVM Lineal ($C=10$) & 74 & 0.5901 & 60.42\% & 0.5695 \\
+E4 & SVM Lineal ($C=1$) & 46 & 0.5816 & 62.50\% & 0.5103 \\
+E2 & Random Forest & 17 & 0.1213 & 27.08\% & 0.2002 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Análisis de Componentes Principales (PCA)}
+El análisis PCA sobre las 8100 dimensiones de HOG reveló que se requieren 195 componentes principales para retener el 95\% de la varianza explicada acumulada. No obstante, al comparar SVM RBF con y sin PCA, el modelo lineal sobre el espacio completo HOG preservó una separabilidad hiperplánica superior debido a la naturaleza dispersa de los gradientes orientados.
+
+\section{Resultados en el Conjunto de Prueba y Evaluación}
+
+El modelo ganador (E1 con SVM Lineal) fue evaluado una sola vez sobre el conjunto de prueba reservado (53 monedas). La Tabla~\ref{tab:test_metrics} presenta el reporte detallado por denominación.
+
+\begin{table}[htbp]
+\caption{Métricas finales sobre el conjunto de prueba reservado (53 monedas).}
+\label{tab:test_metrics}
+\centering
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Denominación} & \textbf{Precisión} & \textbf{Recall} & \textbf{F1-Score} & \textbf{Soporte} \\
+\midrule
+1 cent   & 0.833 & 0.833 & 0.833 & 6 \\
+2 cents  & 0.778 & 0.875 & 0.824 & 8 \\
+5 cents  & 1.000 & 0.875 & 0.933 & 8 \\
+10 cents & 0.714 & 1.000 & 0.833 & 5 \\
+20 cents & 1.000 & 0.625 & 0.769 & 8 \\
+50 cents & 0.833 & 1.000 & 0.909 & 5 \\
+1 euro   & 1.000 & 1.000 & 1.000 & 8 \\
+2 euros  & 1.000 & 1.000 & 1.000 & 5 \\
+\midrule
+\textbf{Promedio Macro} & \textbf{0.895} & \textbf{0.901} & \textbf{0.888} & \textbf{53} \\
+\textbf{Promedio Ponderado} & \textbf{0.905} & \textbf{0.887} & \textbf{0.885} & \textbf{53} \\
+\textbf{Exactitud Global} & \multicolumn{4}{c}{\textbf{88.68\% (47 / 53 correctas)}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Análisis Crítico de Falsos Positivos y Negativos}
+Se identificaron exactamente 6 clasificaciones erróneas (11.32\% de error). El análisis pormenorizado en `outputs/tables/error_analysis_details.csv` demuestra un patrón determinante: el 100\% de las confusiones ocurrieron de forma intra-aleación:
+\begin{itemize}
+    \item \textbf{Aleación Cobre}: 2 cents clasificada como 1 cent (confianza 26.0\%), 5 cents como 2 cents (confianza 50.3\%) y 1 cent como 2 cents (confianza 42.0\%). Al normalizar geométricamente a $128 \times 128$, la referencia de diámetro físico absoluto se atenúa; si el grabado numeral presenta desgaste por circulación o reflejos especulares, el descriptor HOG experimenta ambigüedad.
+    \item \textbf{Oro Nórdico}: Tres monedas de 20 cents fueron clasificadas erróneamente (dos como 10 cents y una como 50 cents). Todas comparten la aleación dorada y ranuras perimetrales similares.
+    \item \textbf{Monedas Bimetálicas}: Tanto 1 euro como 2 euros alcanzaron una precisión y un recall perfectos del 100\%, demostrando que la estructura de gradientes concéntricos bimetálicos es invariante y altamente distintiva.
+\end{itemize}
+
+\section{Aplicación Gráfica e Interfaz de Usuario}
+Se desarrolló una aplicación web con Streamlit (`app/streamlit_app.py`) con diseño ergonómico y visualización en tiempo real:
+\begin{itemize}
+    \item \textbf{Modo 1}: Carga de recorte individual, cálculo de características, predicción de denominación, valor en EUR, nivel de confianza y visualización de etapas intermedias (ROI, CLAHE, máscara y HOG).
+    \item \textbf{Modo 2}: Inferencia sobre escenas complejas con múltiples monedas. El sistema ejecuta Watershed para aislar cada objeto, superpone rectángulos delimitadores coloridos, calcula el balance contable acumulado en euros y permite descargar tanto la imagen anotada como el reporte de detecciones en CSV.
+\end{itemize}
+
+\section{Discusión y Limitaciones}
+Aunque el pipeline demostró una exactitud sobresaliente (88.68\%) con una latencia mínima de 1.36 ms, se declaran las siguientes limitaciones metodológicas:
+\begin{enumerate}
+    \item \textbf{Ausencia de escala métrica externa}: Al no disponerse de un objeto de referencia con dimensiones conocidas (como un tablero de ajedrez o regla milimetrada), la escala aparente depende de la distancia focal y la altura del sensor, lo que motivó que la forma pura (E2) tuviera baja capacidad discriminante por sí sola.
+    \item \textbf{Variabilidad de reversos nacionales}: Las monedas de euro poseen reversos conmemorativos heterogéneos según el país emisor, lo cual induce variabilidad morfológica en HOG que solo un mayor volumen de entrenamiento puede mitigar plenamente.
+\end{enumerate}
+
+\section{Conclusiones}
+Se completó de manera rigurosa y reproducible el desarrollo de un sistema de visión artificial para clasificación de monedas de euro. La combinación de preprocesamiento espectral (CLAHE en CIELAB), segmentación por distancia y Watershed, y extracción de gradientes HOG acoplada a una máquina de vectores de soporte lineal demostró ser la arquitectura más eficaz, superando a métodos no paramétricos y redes neuronales densas con datos limitados. El estricto protocolo de partición por grupos impidió la fuga de datos, validando la solidez de las métricas obtenidas.
+
+\begin{thebibliography}{00}
+\bibitem{dalal2005histograms} N. Dalal and B. Triggs, ``Histograms of oriented gradients for human detection,'' in \textit{IEEE Computer Society Conference on Computer Vision and Pattern Recognition (CVPR)}, vol. 1, 2005, pp. 886--893.
+\bibitem{vincent1991watersheds} L. Vincent and P. Soille, ``Watersheds in digital spaces: an efficient algorithm based on immersion simulations,'' \textit{IEEE Transactions on Pattern Analysis and Machine Intelligence}, vol. 13, no. 6, pp. 583--598, 1991.
+\bibitem{hu1962visual} M.-K. Hu, ``Visual pattern recognition by moment invariants,'' \textit{IRE Transactions on Information Theory}, vol. 8, no. 2, pp. 179--187, 1962.
+\bibitem{ojala2002multiresolution} T. Ojala, M. Pietik{\"a}inen, and T. M{\"a}enp{\"a}{\"a}, ``Multiresolution gray-scale and rotation invariant texture classification with local binary patterns,'' \textit{IEEE Transactions on Pattern Analysis and Machine Intelligence}, vol. 24, no. 7, pp. 971--987, 2002.
+\bibitem{haralick1973textural} R. M. Haralick, K. Shanmugam, and I. Dinstein, ``Textural features for image classification,'' \textit{IEEE Transactions on Systems, Man, and Cybernetics}, vol. SMC-3, no. 6, pp. 610--621, 1973.
+\bibitem{otsu1979threshold} N. Otsu, ``A threshold selection method from gray-level histograms,'' \textit{IEEE Transactions on Systems, Man, and Cybernetics}, vol. 9, no. 1, pp. 62--66, 1979.
+\bibitem{cortes1995support} C. Cortes and V. Vapnik, ``Support-vector networks,'' \textit{Machine Learning}, vol. 20, no. 3, pp. 273--297, 1995.
+\bibitem{pedregosa2011scikit} F. Pedregosa et al., ``Scikit-learn: Machine learning in Python,'' \textit{Journal of Machine Learning Research}, vol. 12, pp. 2825--2830, 2011.
+\bibitem{bradski2000opencv} G. Bradski, ``The OpenCV Library,'' \textit{Dr. Dobb's Journal of Software Tools}, 2000.
+\bibitem{staffa2021dataset} J. Staffa, ``EURO coins dataset,'' Kaggle Datasets, DOI: 10.34740/KAGGLE/DSV/2192736, 2021. [En línea]. Disponible en: \url{https://www.kaggle.com/datasets/janstaffa/euro-coins-dataset}.
+\end{thebibliography}
+
+\end{document}

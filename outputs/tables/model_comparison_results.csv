@@ -1,0 +1,28 @@
+experiment_id,features_family,dimension,classifier,best_params,cv_f1_macro,val_accuracy,val_f1_macro,val_f1_weighted,fit_time_seconds
+E1,HOG,8100,svm_linear,{'clf__C': 0.01},0.8044,0.875,0.8382,0.8697,16.15
+E5,Combinada (HOG+Forma+Color+Textura),8237,svm_linear,{'clf__C': 0.01},0.8044,0.8542,0.819,0.8475,25.41
+E5,Combinada (HOG+Forma+Color+Textura) + PCA(95%),8237,svm_rbf_pca95,"{'clf__C': 10.0, 'clf__gamma': 'scale'}",0.7333,0.7917,0.7587,0.7873,20.82
+E1,HOG,8100,knn,"{'clf__metric': 'manhattan', 'clf__n_neighbors': 3, 'clf__weights': 'distance'}",0.6826,0.7708,0.7517,0.7686,9.67
+E5,Combinada (HOG+Forma+Color+Textura),8237,knn,"{'clf__metric': 'manhattan', 'clf__n_neighbors': 3, 'clf__weights': 'distance'}",0.7095,0.7708,0.7403,0.7709,10.85
+E1,HOG,8100,mlp,"{'clf__alpha': 0.1, 'clf__hidden_layer_sizes': (50,), 'clf__learning_rate_init': 0.001}",0.6798,0.75,0.7128,0.7456,92.51
+E5,Combinada (HOG+Forma+Color+Textura),8237,random_forest,"{'clf__max_depth': None, 'clf__min_samples_split': 2, 'clf__n_estimators': 200}",0.6785,0.75,0.6998,0.7323,89.44
+E1,HOG + PCA(95%),8100,svm_rbf_pca95,"{'clf__C': 10.0, 'clf__gamma': 'scale'}",0.7134,0.75,0.6791,0.7332,22.65
+E5,Combinada (HOG+Forma+Color+Textura),8237,mlp,"{'clf__alpha': 0.0001, 'clf__hidden_layer_sizes': (50,), 'clf__learning_rate_init': 0.001}",0.6622,0.75,0.6766,0.7471,147.47
+E5,Combinada (HOG+Forma+Color+Textura),8237,svm_rbf,"{'clf__C': 10.0, 'clf__gamma': 'scale'}",0.6916,0.7917,0.6736,0.7572,124.2
+E1,HOG,8100,svm_rbf,"{'clf__C': 10.0, 'clf__gamma': 'scale'}",0.6998,0.7917,0.6736,0.7572,90.28
+E3,Color,74,svm_linear,{'clf__C': 10.0},0.5901,0.6042,0.5695,0.5916,0.65
+E1,HOG,8100,random_forest,"{'clf__max_depth': 10, 'clf__min_samples_split': 5, 'clf__n_estimators': 100}",0.6596,0.7083,0.5358,0.6532,93.55
+E3,Color,74,random_forest,"{'clf__max_depth': None, 'clf__min_samples_split': 2, 'clf__n_estimators': 100}",0.5234,0.5833,0.5293,0.5732,21.59
+E4,Textura,46,svm_linear,{'clf__C': 1.0},0.5816,0.625,0.5103,0.5991,0.7
+E3,Color,74,svm_rbf,"{'clf__C': 100.0, 'clf__gamma': 0.01}",0.6093,0.625,0.5091,0.5866,2.33
+E4,Textura,46,svm_rbf,"{'clf__C': 10.0, 'clf__gamma': 0.01}",0.5601,0.5625,0.4333,0.5129,2.52
+E3,Color,74,mlp,"{'clf__alpha': 0.1, 'clf__hidden_layer_sizes': (50,), 'clf__learning_rate_init': 0.01}",0.4941,0.4167,0.3906,0.395,4.37
+E3,Color,74,knn,"{'clf__metric': 'manhattan', 'clf__n_neighbors': 3, 'clf__weights': 'distance'}",0.5056,0.4792,0.3771,0.4545,0.75
+E4,Textura,46,mlp,"{'clf__alpha': 0.1, 'clf__hidden_layer_sizes': (100, 50), 'clf__learning_rate_init': 0.01}",0.5082,0.4792,0.3623,0.4421,5.74
+E4,Textura,46,knn,"{'clf__metric': 'euclidean', 'clf__n_neighbors': 3, 'clf__weights': 'distance'}",0.454,0.3542,0.3305,0.3584,0.74
+E4,Textura,46,random_forest,"{'clf__max_depth': 10, 'clf__min_samples_split': 5, 'clf__n_estimators': 100}",0.4605,0.3958,0.2872,0.3701,21.55
+E2,Forma,17,random_forest,"{'clf__max_depth': None, 'clf__min_samples_split': 2, 'clf__n_estimators': 200}",0.1213,0.2708,0.2002,0.2252,18.63
+E2,Forma,17,svm_rbf,"{'clf__C': 10.0, 'clf__gamma': 0.01}",0.1201,0.1667,0.1229,0.1222,1.98
+E2,Forma,17,knn,"{'clf__metric': 'euclidean', 'clf__n_neighbors': 5, 'clf__weights': 'uniform'}",0.0962,0.125,0.0732,0.0976,0.71
+E2,Forma,17,svm_linear,{'clf__C': 0.1},0.097,0.1458,0.0703,0.0938,0.61
+E2,Forma,17,mlp,"{'clf__alpha': 0.0001, 'clf__hidden_layer_sizes': (100,), 'clf__learning_rate_init': 0.01}",0.0857,0.1458,0.0612,0.0816,3.56

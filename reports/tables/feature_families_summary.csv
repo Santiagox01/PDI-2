@@ -1,0 +1,6 @@
+Familia,Experimento,Dimension,Tiempo_ms_por_moneda,Propiedades_Fisicas,Invarianzas
+HOG (Histogram of Oriented Gradients),E1,8100,23.73,"Bordes de relieve, mapa de orientacion de gradientes del cuño",Invarianza a iluminacion monotonica (bloques L2-Hys)
+Geometría y Forma (Contorno + Hu),E2,17,6.52,"Circularidad, convexidad, radio aparente, 7 momentos invariantes de Hu","Invarianza estricta a traslacion, escala y rotacion 2D"
+Colorimetría (HSV + CIELAB + RGB),E3,74,4.92,"Aleaciones metalicas: Cobre (1c,2c,5c), Oro nordico (10c,20c,50c), Bimetalicas (1e,2e)","Invarianza a sombras (espacio perceptual CIELAB canal a*, b*)"
+Textura (LBP Uniforme + GLCM),E4,46,10.4,"Micro-textura superficial, contraste y homogeneidad del grabado",Invarianza a rotacion (LBP circular uniforme y promedio GLCM)
+Combinada Multimodal,E5,8237,45.56,"Fusion completa de estructura, geometria, aleacion y textura",Complementariedad robusta multivariada

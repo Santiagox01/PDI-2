@@ -1,0 +1,2 @@
+Modelo,Familia_Caracteristicas,Accuracy,F1_Macro,F1_Ponderado,Precision_Macro,Recall_Macro,Latencia_ms_por_moneda,Total_Muestras_Prueba
+svm_linear,HOG,0.8868,0.8877,0.8853,0.8948,0.901,1.36,53

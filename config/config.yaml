@@ -1,0 +1,97 @@
+# Central Configuration for Euro Coin Classifier Project
+seed: 42
+
+paths:
+  raw_images: "data/raw/images"
+  raw_labels: "data/raw/labels"
+  manifest: "data/interim/dataset_manifest.csv"
+  rois: "data/processed/rois"
+  masks: "data/processed/masks"
+  features: "data/processed/features"
+  splits: "data/splits"
+  models: "models"
+  outputs: "outputs"
+  reports: "reports"
+  manual_scenes: "data/manual_scene_images"
+
+classes:
+  0:
+    name: "1 cent"
+    value: 0.01
+    color_group: "copper"
+  1:
+    name: "2 cents"
+    value: 0.02
+    color_group: "copper"
+  2:
+    name: "5 cents"
+    value: 0.05
+    color_group: "copper"
+  3:
+    name: "10 cents"
+    value: 0.10
+    color_group: "gold"
+  4:
+    name: "20 cents"
+    value: 0.20
+    color_group: "gold"
+  5:
+    name: "50 cents"
+    value: 0.50
+    color_group: "gold"
+  6:
+    name: "1 euro"
+    value: 1.00
+    color_group: "bicolor_gold_center"
+  7:
+    name: "2 euros"
+    value: 2.00
+    color_group: "bicolor_silver_center"
+
+preprocessing:
+  target_roi_size: [128, 128]
+  padding_ratio: 0.05
+  gaussian_blur_ksize: [5, 5]
+  clahe_clip_limit: 2.0
+  clahe_tile_grid: [8, 8]
+  morph_kernel_size: 5
+  min_contour_area: 500
+
+features:
+  hog:
+    orientations: 9
+    pixels_per_cell: [8, 8]
+    cells_per_block: [2, 2]
+    block_norm: "L2-Hys"
+    visualize: false
+  shape:
+    include_hu_moments: true
+    include_circularity: true
+    include_aspect_ratio: true
+    include_solidity: true
+    include_extent: true
+    include_diameter: true
+  color:
+    include_hsv_stats: true
+    include_cielab_stats: true
+    include_rgb_stats: true
+    hist_bins_per_channel: 8
+  texture:
+    lbp_p1: 8
+    lbp_r1: 1
+    lbp_p2: 16
+    lbp_r2: 2
+    glcm_distances: [1, 2]
+    glcm_angles: [0, 0.785398, 1.570796, 2.356194] # 0, pi/4, pi/2, 3pi/4
+
+splits:
+  train_ratio: 0.70
+  val_ratio: 0.15
+  test_ratio: 0.15
+  group_column: "original_image_id"
+  stratify_column: "class_id"
+
+training:
+  cv_folds: 5
+  scoring: "f1_macro"
+  pca_target_variance: 0.95
