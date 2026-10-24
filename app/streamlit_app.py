@@ -4,7 +4,11 @@ Aplicacion interactiva Streamlit para clasificacion de monedas de euro (Modo 1: 
 
 import os
 import sys
-sys.path.insert(0, os.path.abspath("."))
+
+# Anclar ruta raiz del repositorio para despliegue en Streamlit Cloud / local
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
 
 import io
 import time
@@ -91,7 +95,8 @@ st.markdown("""
 @st.cache_resource
 def get_predictor():
     """Carga y cachea el predictor para no reentrenar ni recargar el modelo innecesariamente."""
-    return EuroCoinPredictor("models/final_model.joblib")
+    model_path = os.path.join(ROOT_DIR, "models", "final_model.joblib")
+    return EuroCoinPredictor(model_path)
 
 
 def main():
@@ -138,7 +143,7 @@ def render_mode_single_coin(predictor: EuroCoinPredictor, debug_mode: bool):
                 file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
                 img_bgr = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
         else:
-            rois_dir = "data/processed/rois"
+            rois_dir = os.path.join(ROOT_DIR, "data", "processed", "rois")
             if os.path.exists(rois_dir):
                 available_rois = sorted([f for f in os.listdir(rois_dir) if f.endswith(".png")])[:30]
                 selected_sample = st.selectbox("Seleccione un recorte de muestra:", available_rois)
@@ -221,7 +226,7 @@ def render_mode_multi_coin(predictor: EuroCoinPredictor, debug_mode: bool):
             file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
             img_bgr = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
     else:
-        raw_images_dir = "data/raw/images"
+        raw_images_dir = os.path.join(ROOT_DIR, "data", "raw", "images")
         if os.path.exists(raw_images_dir):
             scene_files = sorted([f for f in os.listdir(raw_images_dir) if f.endswith(".jpg")])[:20]
             selected_scene = st.selectbox("Seleccione una escena de prueba:", scene_files)
@@ -309,42 +314,51 @@ def render_mode_metrics():
 
     with tab1:
         st.markdown("### Métricas Definitivas sobre el Conjunto de Prueba (53 monedas)")
-        if os.path.exists("outputs/tables/test_evaluation_metrics.csv"):
-            df_m = pd.read_csv("outputs/tables/test_evaluation_metrics.csv")
+        metrics_csv = os.path.join(ROOT_DIR, "outputs", "tables", "test_evaluation_metrics.csv")
+        if os.path.exists(metrics_csv):
+            df_m = pd.read_csv(metrics_csv)
             st.dataframe(df_m, use_container_width=True)
 
-        if os.path.exists("outputs/tables/classification_report.csv"):
+        clf_rep_csv = os.path.join(ROOT_DIR, "outputs", "tables", "classification_report.csv")
+        if os.path.exists(clf_rep_csv):
             st.markdown("#### Reporte de Clasificación por Clase")
-            df_rep = pd.read_csv("outputs/tables/classification_report.csv", index_col=0)
+            df_rep = pd.read_csv(clf_rep_csv, index_col=0)
             st.dataframe(df_rep, use_container_width=True)
 
         c1, c2 = st.columns(2)
         with c1:
-            if os.path.exists("outputs/figures/confusion_matrix_absolute.png"):
-                st.image("outputs/figures/confusion_matrix_absolute.png", caption="Matriz de Confusión Absoluta", use_container_width=True)
+            cm_abs_png = os.path.join(ROOT_DIR, "outputs", "figures", "confusion_matrix_absolute.png")
+            if os.path.exists(cm_abs_png):
+                st.image(cm_abs_png, caption="Matriz de Confusión Absoluta", use_container_width=True)
         with c2:
-            if os.path.exists("outputs/figures/confusion_matrix_normalized.png"):
-                st.image("outputs/figures/confusion_matrix_normalized.png", caption="Matriz de Confusión Normalizada", use_container_width=True)
+            cm_norm_png = os.path.join(ROOT_DIR, "outputs", "figures", "confusion_matrix_normalized.png")
+            if os.path.exists(cm_norm_png):
+                st.image(cm_norm_png, caption="Matriz de Confusión Normalizada", use_container_width=True)
 
     with tab2:
         st.markdown("### Comparativa de Experimentos E1 a E5")
-        if os.path.exists("outputs/tables/model_comparison_results.csv"):
-            df_comp = pd.read_csv("outputs/tables/model_comparison_results.csv")
+        comp_csv = os.path.join(ROOT_DIR, "outputs", "tables", "model_comparison_results.csv")
+        if os.path.exists(comp_csv):
+            df_comp = pd.read_csv(comp_csv)
             st.dataframe(df_comp, use_container_width=True)
 
-        if os.path.exists("outputs/figures/model_comparison_chart.png"):
-            st.image("outputs/figures/model_comparison_chart.png", caption="Comparativa de F1-Score en Validación", use_container_width=True)
+        comp_chart_png = os.path.join(ROOT_DIR, "outputs", "figures", "model_comparison_chart.png")
+        if os.path.exists(comp_chart_png):
+            st.image(comp_chart_png, caption="Comparativa de F1-Score en Validación", use_container_width=True)
 
-        if os.path.exists("outputs/figures/pca_variance_explained.png"):
-            st.image("outputs/figures/pca_variance_explained.png", caption="Curva de Varianza Explicada Acumulada por PCA", use_container_width=True)
+        pca_png = os.path.join(ROOT_DIR, "outputs", "figures", "pca_variance_explained.png")
+        if os.path.exists(pca_png):
+            st.image(pca_png, caption="Curva de Varianza Explicada Acumulada por PCA", use_container_width=True)
 
     with tab3:
         st.markdown("### Análisis Detallado de Falsos Positivos y Falsos Negativos")
-        if os.path.exists("outputs/figures/error_analysis_gallery.png"):
-            st.image("outputs/figures/error_analysis_gallery.png", caption="Muestra Visual de Monedas Mal Clasificadas", use_container_width=True)
+        err_gal_png = os.path.join(ROOT_DIR, "outputs", "figures", "error_analysis_gallery.png")
+        if os.path.exists(err_gal_png):
+            st.image(err_gal_png, caption="Muestra Visual de Monedas Mal Clasificadas", use_container_width=True)
 
-        if os.path.exists("outputs/tables/error_analysis_details.csv"):
-            df_err = pd.read_csv("outputs/tables/error_analysis_details.csv")
+        err_csv = os.path.join(ROOT_DIR, "outputs", "tables", "error_analysis_details.csv")
+        if os.path.exists(err_csv):
+            df_err = pd.read_csv(err_csv)
             st.dataframe(df_err, use_container_width=True)
 
 

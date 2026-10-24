@@ -23,7 +23,12 @@ from src.features.texture_features import extract_texture_single
 class EuroCoinPredictor:
     def __init__(self, model_path: str = "models/final_model.joblib"):
         if not os.path.exists(model_path):
-            raise FileNotFoundError(f"No se encontro el modelo serializado en: {model_path}")
+            repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+            alt_path = os.path.join(repo_root, model_path)
+            if os.path.exists(alt_path):
+                model_path = alt_path
+            else:
+                raise FileNotFoundError(f"No se encontro el modelo serializado en: {model_path} ni en {alt_path}")
         
         self.artifact = joblib.load(model_path)
         self.pipeline = self.artifact["pipeline"]
